@@ -1,0 +1,19 @@
+{
+    "name": "<TODO: your plugin name>",
+    "url": "<TODO: Your Plugin URL here>",
+    "description": "<TODO: Your Plugin description here>",
+    "main": "index.js",
+    "posthogVersion": ">= 1.25.0",
+    "config": [
+        {
+            "markdown": "<TODO: your plugin config, remove if none>"
+        },
+        {
+            "key": "greeting",
+            "name": "What greeting would you like to use?",
+            "type": "string",
+            "default": "Hello World!",
+            "required": false
+        }
+    ]
+}
