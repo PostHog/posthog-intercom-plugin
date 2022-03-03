@@ -1,18 +1,41 @@
 {
-    "name": "<TODO: your plugin name>",
-    "url": "<TODO: Your Plugin URL here>",
-    "description": "<TODO: Your Plugin description here>",
-    "main": "index.js",
-    "posthogVersion": ">= 1.25.0",
+    "name": "Intercom",
+    "url": "TODO",
+    "description": "Send event data to Intercom on PostHog events.",
+    "main": "index.ts",
     "config": [
         {
-            "markdown": "<TODO: your plugin config, remove if none>"
+            "key": "intercomApiKey",
+            "hint": "Create an Intercom app, then go to Configure > Authentication.",
+            "name": "Intercom API Key",
+            "type": "string",
+            "default": "",
+            "required": true,
+            "secret": true
         },
         {
-            "key": "greeting",
-            "name": "What greeting would you like to use?",
+            "key": "triggeringEvents",
+            "hint": "A comma-separated list of PostHog events you want to send to Intercom. By default, if you leave this field empty, all events are sent.",
+            "name": "Triggering events",
             "type": "string",
-            "default": "Hello World!",
+            "default": "",
+            "required": true
+        },
+        {
+            "key": "ignoredEmailDomains",
+            "hint": "A comma-separated list of email domains to ignore and not send events for in Intercom (e.g. 'posthog.com,dev.posthog.com' ).",
+            "name": "Email domains to skip",
+            "type": "string",
+            "default": "",
+            "required": false
+        },
+        {
+            "key": "useEuropeanDataStorage",
+            "hint": "Send events to api.eu.intercom.com, if you are using Intercom's European Data Hosting",
+            "name": "Send events to European Data Hosting",
+            "type": "choice",
+            "default": "False",
+            "choices": ["True", "False"],
             "required": false
         }
     ]
