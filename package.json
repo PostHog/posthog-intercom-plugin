@@ -1,8 +1,10 @@
 {
-    "name": "@posthog/intercom-plugin",
-    "private": true,
+    "name": "posthog-intercom-plugin",
+    "private": false,
     "version": "0.0.1",
     "description": "Export PostHog events to Intercom.",
+    "author": "Emanuele Capparelli (k@emkpp.com)",
+    "license": "MIT",
     "dependencies": {},
     "scripts": {
         "test": "jest .",
