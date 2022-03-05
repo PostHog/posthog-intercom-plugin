@@ -142,7 +142,7 @@ function isEmail(email: string): boolean {
     return re.test(String(email).toLowerCase())
 }
 
-export function getEmailFromEvent(event: PluginEvent): string | null {
+function getEmailFromEvent(event: PluginEvent): string | null {
     if (isEmail(event.distinct_id)) {
         return event.distinct_id
     } else if (event['$set'] && Object.keys(event['$set']).includes('email')) {
@@ -158,15 +158,12 @@ export function getEmailFromEvent(event: PluginEvent): string | null {
     return null
 }
 
-export function isEmailDomainValid(ignoredEmailDomains: string, email: string): boolean {
+function isEmailDomainValid(ignoredEmailDomains: string, email: string): boolean {
     const emailDomainsToIgnore = (ignoredEmailDomains || '').split(',').map((e) => e.trim())
-    if (emailDomainsToIgnore.indexOf(email.split('@')[1]) >= 0) {
-        return false
-    }
-    return true
+    return emailDomainsToIgnore.indexOf(email.split('@')[1]) < 0
 }
 
-export function isEventValid(triggeringEvents: string, event: string): boolean {
+function isEventValid(triggeringEvents: string, event: string): boolean {
     const validEvents = (triggeringEvents || '').split(',').map((e) => e.trim())
     return validEvents.indexOf(event) >= 0
 }
