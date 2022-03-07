@@ -16,6 +16,7 @@ type IntercomPlugin = Plugin<{
 type IntercomMeta = PluginMeta<IntercomPlugin>
 
 async function setupPlugin({ config, global }: IntercomMeta) {
+    // nit: for a better UX, I'd use Yes/No as that's more friendly to non-engineers than True/False
     global.intercomUrl =
         config.useEuropeanDataStorage === 'True' ? 'https://api.eu.intercom.com' : 'https://api.intercom.io'
 }
@@ -31,14 +32,20 @@ async function onEvent(event: PluginEvent, { config, global }: IntercomMeta) {
     if (!isEmailDomainValid(config.ignoredEmailDomains, email)) {
         return
     }
+    
+    // below I suggested we run `sendEventToIntercom` as a job, and I'd add other async ops like this one into that job
     const isContactInIntercom = await searchContactInIntercom(global.intercomUrl, config.intercomApiKey, email)
     if (!isContactInIntercom) {
         return
     }
 
+    // let's also look for 'timestamp' in props or at the top-level.
+    // this is our fault - we do timestamp processing after passing events to plugins, should probably do it before
     const date = event['sent_at'] ? new Date(event['sent_at']) : new Date()
     const timestamp = Math.floor(date.getTime() / 1000)
 
+    
+    // let's set this up as a job and trigger with runNow - see https://posthog.com/docs/plugins/build/reference#jobs-1
     await sendEventToIntercom(
         global.intercomUrl,
         config.intercomApiKey,
@@ -49,6 +56,8 @@ async function onEvent(event: PluginEvent, { config, global }: IntercomMeta) {
     )
 }
 
+// product question, maybe for @marcushyett-ph: when a contact doesn't exist, do we maybe want to create it?
+// super nit, feel free to ignore: I'd make this sound grammatically correct: `searchForContactInIntercom`
 async function searchContactInIntercom(url: string, apiKey: string, email: string) {
     const searchContactResponse = await fetchWithRetry(
         `${url}/contacts/search`,
@@ -72,8 +81,8 @@ async function searchContactInIntercom(url: string, apiKey: string, email: strin
 
     if (!statusOk(searchContactResponse) || searchContactResponseJson.errors) {
         const errorMessage = searchContactResponseJson.errors ? searchContactResponseJson.errors[0].message : ''
-        console.log(
-            `Unable to search contact ${email} in Intercom. Status Code: ${searchContactResponseJson.status}. Error message: ${errorMessage}`
+        console.error(
+            `Unable to search for contact ${email} in Intercom. Status Code: ${searchContactResponseJson.status}. Error message: ${errorMessage}`
         )
         return false
     } else {
@@ -163,6 +172,8 @@ function isEmailDomainValid(ignoredEmailDomains: string, email: string): boolean
     return emailDomainsToIgnore.indexOf(email.split('@')[1]) < 0
 }
 
+// nit: "valid" is a misleading term, it indicates to me that something is wrong with the payload of "invalid" events
+// instead of the fact that they're just being explicitly ignores
 function isEventValid(triggeringEvents: string, event: string): boolean {
     const validEvents = (triggeringEvents || '').split(',').map((e) => e.trim())
     return validEvents.indexOf(event) >= 0
