@@ -1,14 +1,14 @@
 //@ts-ignore
 import { createEvent } from '@posthog/plugin-scaffold/test/utils'
 
-import { getEmailFromEvent, isEmailDomainValid, isEventValid } from './index'
+import { getEmailFromEvent, isEmailDomainValid, isTriggeringEvent } from './index'
 
-test('isEventValid', async () => {
+test('isTriggeringEvent', async () => {
     const event = createEvent({ event: '$identify' })
-    expect(isEventValid('$identify', event.event)).toEqual(true)
-    expect(isEventValid('other_event', event.event)).toEqual(false)
-    expect(isEventValid('other_event,$identify', event.event)).toEqual(true)
-    expect(isEventValid('other_event, $identify, another_event', event.event)).toEqual(true)
+    expect(isTriggeringEvent('$identify', event.event)).toEqual(true)
+    expect(isTriggeringEvent('other_event', event.event)).toEqual(false)
+    expect(isTriggeringEvent('other_event,$identify', event.event)).toEqual(true)
+    expect(isTriggeringEvent('other_event, $identify, another_event', event.event)).toEqual(true)
 })
 
 test('isEmailDomainValid', async () => {
