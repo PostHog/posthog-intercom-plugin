@@ -34,8 +34,8 @@
             "hint": "Send events to api.eu.intercom.com, if you are using Intercom's European Data Hosting.",
             "name": "Send events to European Data Hosting",
             "type": "choice",
-            "default": "False",
-            "choices": ["True", "False"],
+            "default": "No",
+            "choices": ["Yes", "No"],
             "required": false
         }
     ]
