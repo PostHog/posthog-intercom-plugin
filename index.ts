@@ -58,7 +58,7 @@ export async function onEvent(event: PluginEvent, { config, jobs }: IntercomMeta
 
     const timestamp = getTimestamp(event)
 
-    jobs.sendToIntercom({
+    await jobs.sendToIntercom({
         email,
         event: event.event,
         userId: event['distinct_id'],
@@ -129,7 +129,7 @@ async function sendEventToIntercom(
     if (!statusOk(sendEventResponse)) {
         let errorMessage = ''
         try {
-            const sendEventResponseJson = sendEventResponse.json() as Record<string, any>
+            const sendEventResponseJson = await sendEventResponse.json()
             errorMessage = sendEventResponseJson.errors ? sendEventResponseJson.errors[0].message : ''
         } catch {}
         console.error(
@@ -175,8 +175,11 @@ export function getEmailFromEvent(event: PluginEvent): string | null {
     return null
 }
 
+// same feedback as before for isEventValid - can we rename to something more accurate? isEmailDomain 
 export function isEmailDomainValid(ignoredEmailDomains: string, email: string): boolean {
     const emailDomainsToIgnore = (ignoredEmailDomains || '').split(',').map((e) => e.trim())
+    
+    // nit: .includes is cleaner syntax
     return emailDomainsToIgnore.indexOf(email.split('@')[1]) < 0
 }
 
