@@ -52,13 +52,13 @@ export async function onEvent(event: PluginEvent, { config, jobs }: IntercomMeta
     if (!email) {
         return
     }
-    if (!isEmailDomainValid(config.ignoredEmailDomains, email)) {
+    if (isIgnoredEmailDomain(config.ignoredEmailDomains, email)) {
         return
     }
 
     const timestamp = getTimestamp(event)
 
-    jobs.sendToIntercom({
+    await jobs.sendToIntercom({
         email,
         event: event.event,
         userId: event['distinct_id'],
@@ -129,7 +129,7 @@ async function sendEventToIntercom(
     if (!statusOk(sendEventResponse)) {
         let errorMessage = ''
         try {
-            const sendEventResponseJson = sendEventResponse.json() as Record<string, any>
+            const sendEventResponseJson = await sendEventResponse.json()
             errorMessage = sendEventResponseJson.errors ? sendEventResponseJson.errors[0].message : ''
         } catch {}
         console.error(
@@ -175,9 +175,9 @@ export function getEmailFromEvent(event: PluginEvent): string | null {
     return null
 }
 
-export function isEmailDomainValid(ignoredEmailDomains: string, email: string): boolean {
+export function isIgnoredEmailDomain(ignoredEmailDomains: string, email: string): boolean {
     const emailDomainsToIgnore = (ignoredEmailDomains || '').split(',').map((e) => e.trim())
-    return emailDomainsToIgnore.indexOf(email.split('@')[1]) < 0
+    return emailDomainsToIgnore.includes(email.split('@')[1])
 }
 
 export function isTriggeringEvent(triggeringEvents: string, event: string): boolean {

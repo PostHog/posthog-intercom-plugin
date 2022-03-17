@@ -1,7 +1,7 @@
 //@ts-ignore
 import { createEvent } from '@posthog/plugin-scaffold/test/utils'
 
-import { getEmailFromEvent, isEmailDomainValid, isTriggeringEvent } from './index'
+import { getEmailFromEvent, isIgnoredEmailDomain, isTriggeringEvent } from './index'
 
 test('isTriggeringEvent', async () => {
     const event = createEvent({ event: '$identify' })
@@ -11,13 +11,13 @@ test('isTriggeringEvent', async () => {
     expect(isTriggeringEvent('other_event, $identify, another_event', event.event)).toEqual(true)
 })
 
-test('isEmailDomainValid', async () => {
+test('isIgnoredEmailDomain', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const event: any = createEvent({ event: '$identify', email: 'test@test.com' })
-    expect(isEmailDomainValid('posthog.com', event.email)).toEqual(true)
-    expect(isEmailDomainValid('test.com', event.email)).toEqual(false)
-    expect(isEmailDomainValid('posthog.com,test.com', event.email)).toEqual(false)
-    expect(isEmailDomainValid('posthog.com, test.com, posthog.io', event.email)).toEqual(false)
+    expect(isIgnoredEmailDomain('posthog.com', event.email)).toEqual(false)
+    expect(isIgnoredEmailDomain('test.com', event.email)).toEqual(true)
+    expect(isIgnoredEmailDomain('posthog.com,test.com', event.email)).toEqual(true)
+    expect(isIgnoredEmailDomain('posthog.com, test.com, posthog.io', event.email)).toEqual(true)
 })
 
 test('getEmailFromEvent', async () => {
