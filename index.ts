@@ -16,15 +16,19 @@ type IntercomPlugin = Plugin<{
 type IntercomMeta = PluginMeta<IntercomPlugin>
 
 type JobRequest = {
-    email: string,
-    event: string,
-    userId: string,
-    timestamp: number,
+    email: string
+    event: string
+    userId: string
+    timestamp: number
 }
 
 export const jobs = {
     sendToIntercom: async (request: JobRequest, { global, config }: IntercomMeta): Promise<void> => {
-        const isContactInIntercom = await searchForContactInIntercom(global.intercomUrl, config.intercomApiKey, request.email)
+        const isContactInIntercom = await searchForContactInIntercom(
+            global.intercomUrl,
+            config.intercomApiKey,
+            request.email
+        )
         if (!isContactInIntercom) {
             return
         }
@@ -36,7 +40,7 @@ export const jobs = {
             request.userId,
             request.timestamp
         )
-    }
+    },
 }
 
 export async function setupPlugin({ config, global }: IntercomMeta): Promise<void> {
@@ -48,22 +52,27 @@ export async function onEvent(event: PluginEvent, { config, jobs }: IntercomMeta
     if (!isTriggeringEvent(config.triggeringEvents, event.event)) {
         return
     }
+
     const email = getEmailFromEvent(event)
     if (!email) {
+        console.warn(`This event will not be sent to Intercom because no 'email' property was found.`)
         return
     }
+
     if (isIgnoredEmailDomain(config.ignoredEmailDomains, email)) {
         return
     }
 
     const timestamp = getTimestamp(event)
 
-    await jobs.sendToIntercom({
-        email,
-        event: event.event,
-        userId: event['distinct_id'],
-        timestamp,
-    }).runNow()
+    await jobs
+        .sendToIntercom({
+            email,
+            event: event.event,
+            userId: event['distinct_id'],
+            timestamp,
+        })
+        .runNow()
 }
 
 async function searchForContactInIntercom(url: string, apiKey: string, email: string) {
@@ -188,7 +197,7 @@ export function isTriggeringEvent(triggeringEvents: string, event: string): bool
 export function getTimestamp(event: PluginEvent): number {
     try {
         if (event['timestamp']) {
-            return Number(event['timestamp']);
+            return Number(event['timestamp'])
         }
     } catch {
         console.error('Event timestamp cannot be parsed as a number')
