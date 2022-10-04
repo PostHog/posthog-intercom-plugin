@@ -55,7 +55,7 @@ export async function onEvent(event: PluginEvent, { config, jobs }: IntercomMeta
 
     const email = getEmailFromEvent(event)
     if (!email) {
-        console.warn(`This event will not be sent to Intercom because no 'email' property was found.`)
+        console.warn(`This event will not be sent to Intercom because no 'email' was found in the event properties.`)
         return
     }
 
