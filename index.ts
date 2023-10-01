@@ -16,20 +16,26 @@ type IntercomPlugin = Plugin<{
 type IntercomMeta = PluginMeta<IntercomPlugin>
 
 type JobRequest = {
-    email: string
+    email: string | null
     event: string
+    uuid: string
     userId: string
     timestamp: number
 }
 
 export const jobs = {
     sendToIntercom: async (request: JobRequest, { global, config }: IntercomMeta): Promise<void> => {
-        const isContactInIntercom = await searchForContactInIntercom(
+        const contactInIntercom = await searchForContactInIntercom(
             global.intercomUrl,
             config.intercomApiKey,
-            request.email
+            request.email,
+            request.userId
         )
-        if (!isContactInIntercom) {
+        if (!contactInIntercom) {
+            console.warn(
+                `'${request.event}' will not be sent to Intercom, an Intercom customer where external_id=distinct_id or no matching email was found in the event properties.`
+            )
+            console.debug(`Skipped event with UUID ${request.uuid}`)
             return
         }
         await sendEventToIntercom(
@@ -37,7 +43,7 @@ export const jobs = {
             config.intercomApiKey,
             request.email,
             request.event,
-            request.userId,
+            request.userId || contactInIntercom.external_id,
             request.timestamp
         )
     },
@@ -54,15 +60,8 @@ export async function onEvent(event: PluginEvent, { config, jobs }: IntercomMeta
     }
 
     const email = getEmailFromEvent(event)
-    if (!email) {
-        console.warn(
-            `'${event.event}' will not be sent to Intercom because distinct_id is not an email and no 'email' was found in the event properties.`
-        )
-        console.debug(`Skipped event with UUID ${event.uuid}`)
-        return
-    }
 
-    if (isIgnoredEmailDomain(config.ignoredEmailDomains, email)) {
+    if (email && isIgnoredEmailDomain(config.ignoredEmailDomains, email)) {
         return
     }
 
@@ -73,12 +72,13 @@ export async function onEvent(event: PluginEvent, { config, jobs }: IntercomMeta
             email,
             event: event.event,
             userId: event['distinct_id'],
+            uuid: event.uuid,
             timestamp,
         })
         .runNow()
 }
 
-async function searchForContactInIntercom(url: string, apiKey: string, email: string) {
+async function searchForContactInIntercom(url: string, apiKey: string, email: string | null, distinctId: string) {
     const searchContactResponse = await fetchWithRetry(
         `${url}/contacts/search`,
         {
@@ -88,11 +88,17 @@ async function searchForContactInIntercom(url: string, apiKey: string, email: st
                 Authorization: `Bearer ${apiKey}`,
             },
             body: JSON.stringify({
-                query: {
-                    field: 'email',
-                    operator: '=',
-                    value: email,
-                },
+                query: email
+                    ? {
+                          field: 'email',
+                          operator: '=',
+                          value: email,
+                      }
+                    : {
+                          field: 'external_id',
+                          operator: '=',
+                          value: distinctId,
+                      },
             }),
         },
         'POST'
@@ -102,12 +108,14 @@ async function searchForContactInIntercom(url: string, apiKey: string, email: st
     if (!statusOk(searchContactResponse) || searchContactResponseJson.errors) {
         const errorMessage = searchContactResponseJson.errors ? searchContactResponseJson.errors[0].message : ''
         console.error(
-            `Unable to search contact ${email} in Intercom. Status Code: ${searchContactResponseJson.status}. Error message: ${errorMessage}`
+            `Unable to search contact ${email || distinctId} in Intercom. Status Code: ${
+                searchContactResponseJson.status
+            }. Error message: ${errorMessage}`
         )
         return false
     } else {
-        const found = searchContactResponseJson['total_count'] > 0
-        console.log(`Contact ${email} in Intercom ${found ? 'found' : 'not found'}`)
+        const found = searchContactResponseJson.data && searchContactResponseJson.data[0]
+        console.log(`Contact ${email || distinctId} in Intercom ${found ? 'found' : 'not found'}`)
         return found
     }
 }
@@ -115,7 +123,7 @@ async function searchForContactInIntercom(url: string, apiKey: string, email: st
 async function sendEventToIntercom(
     url: string,
     apiKey: string,
-    email: string,
+    email: string | null,
     event: string,
     distinct_id: string,
     eventSendTime: number
