@@ -18,6 +18,7 @@ type IntercomMeta = PluginMeta<IntercomPlugin>
 type JobRequest = {
     email: string | null
     event: string
+    uuid: string
     userId: string
     timestamp: number
 }
@@ -31,6 +32,10 @@ export const jobs = {
             request.userId
         )
         if (!contactInIntercom) {
+            console.warn(
+                `'${request.event}' will not be sent to Intercom, an Intercom customer where external_id=distinct_id or no matching email was found in the event properties.`
+            )
+            console.debug(`Skipped event with UUID ${request.uuid}`)
             return
         }
         await sendEventToIntercom(
@@ -38,7 +43,7 @@ export const jobs = {
             config.intercomApiKey,
             request.email,
             request.event,
-            request.userId || contactInIntercom.id,
+            request.userId || contactInIntercom.external_id,
             request.timestamp
         )
     },
@@ -67,6 +72,7 @@ export async function onEvent(event: PluginEvent, { config, jobs }: IntercomMeta
             email,
             event: event.event,
             userId: event['distinct_id'],
+            uuid: event.uuid,
             timestamp,
         })
         .runNow()
@@ -102,12 +108,14 @@ async function searchForContactInIntercom(url: string, apiKey: string, email: st
     if (!statusOk(searchContactResponse) || searchContactResponseJson.errors) {
         const errorMessage = searchContactResponseJson.errors ? searchContactResponseJson.errors[0].message : ''
         console.error(
-            `Unable to search contact ${email} in Intercom. Status Code: ${searchContactResponseJson.status}. Error message: ${errorMessage}`
+            `Unable to search contact ${email || distinctId} in Intercom. Status Code: ${
+                searchContactResponseJson.status
+            }. Error message: ${errorMessage}`
         )
         return false
     } else {
         const found = searchContactResponseJson.data && searchContactResponseJson.data[0]
-        console.log(`Contact ${email} in Intercom ${found ? 'found' : 'not found'}`)
+        console.log(`Contact ${email || distinctId} in Intercom ${found ? 'found' : 'not found'}`)
         return found
     }
 }
@@ -117,7 +125,7 @@ async function sendEventToIntercom(
     apiKey: string,
     email: string | null,
     event: string,
-    id: string,
+    distinct_id: string,
     eventSendTime: number
 ) {
     const sendEventResponse = await fetchWithRetry(
@@ -132,7 +140,7 @@ async function sendEventToIntercom(
                 event_name: event,
                 created_at: eventSendTime,
                 email,
-                id,
+                id: distinct_id,
             }),
         },
         'POST'
