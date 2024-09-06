@@ -16,7 +16,7 @@ type IntercomPlugin = Plugin<{
 type IntercomMeta = PluginMeta<IntercomPlugin>
 
 
-export async function onEvent(event: PluginEvent, { config, jobs }: IntercomMeta): Promise<void> {
+export async function onEvent(event: PluginEvent, { config }: IntercomMeta): Promise<void> {
     if (!isTriggeringEvent(config.triggeringEvents, event.event)) {
         return
     }
