@@ -15,43 +15,13 @@ type IntercomPlugin = Plugin<{
 
 type IntercomMeta = PluginMeta<IntercomPlugin>
 
-type JobRequest = {
-    email: string
-    event: string
-    userId: string
-    timestamp: number
-}
 
-export const jobs = {
-    sendToIntercom: async (request: JobRequest, { global, config }: IntercomMeta): Promise<void> => {
-        const isContactInIntercom = await searchForContactInIntercom(
-            global.intercomUrl,
-            config.intercomApiKey,
-            request.email
-        )
-        if (!isContactInIntercom) {
-            return
-        }
-        await sendEventToIntercom(
-            global.intercomUrl,
-            config.intercomApiKey,
-            request.email,
-            request.event,
-            request.userId,
-            request.timestamp
-        )
-    },
-}
-
-export async function setupPlugin({ config, global }: IntercomMeta): Promise<void> {
-    global.intercomUrl =
-        config.useEuropeanDataStorage === 'Yes' ? 'https://api.eu.intercom.com' : 'https://api.intercom.io'
-}
-
-export async function onEvent(event: PluginEvent, { config, jobs }: IntercomMeta): Promise<void> {
+export async function onEvent(event: PluginEvent, { config }: IntercomMeta): Promise<void> {
     if (!isTriggeringEvent(config.triggeringEvents, event.event)) {
         return
     }
+
+    const intercomUrl = config.useEuropeanDataStorage === 'Yes' ? 'https://api.eu.intercom.com' : 'https://api.intercom.io'
 
     const email = getEmailFromEvent(event)
     if (!email) {
@@ -68,14 +38,22 @@ export async function onEvent(event: PluginEvent, { config, jobs }: IntercomMeta
 
     const timestamp = getTimestamp(event)
 
-    await jobs
-        .sendToIntercom({
-            email,
-            event: event.event,
-            userId: event['distinct_id'],
-            timestamp,
-        })
-        .runNow()
+    const isContactInIntercom = await searchForContactInIntercom(
+        intercomUrl,
+        config.intercomApiKey,
+        email
+    )
+    if (!isContactInIntercom) {
+        return
+    }
+    await sendEventToIntercom(
+        intercomUrl,
+        config.intercomApiKey,
+        email,
+        event.event,
+        event['distinct_id'],
+        timestamp
+    )
 }
 
 async function searchForContactInIntercom(url: string, apiKey: string, email: string) {
